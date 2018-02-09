@@ -177,7 +177,7 @@ ifeq (0,$(DBG))
   DFLAGS    += -DNDEBUG
   CXXFLAGS  += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
   CFLAGS    += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
-  FCFLAGS   += -align array64byte     $(FPFMODEL) $(FPFLAGS)
+  FCFLAGS   += -align array64byte     $(FPFMODEL) $(FPFLAGS) -nostandard-realloc-lhs
   #LDFLAGS   += $(NULL)
 else
   OPTFLAGS += -O0
@@ -275,7 +275,7 @@ ifneq (0,$(shell echo "$$((180001 > $(CC_VERSION) && 0 != $(CC_VERSION)))"))
 endif
 
 ifneq (0,$(OMP))
-  FCFLAGS   += -threads
+  FCFLAGS   += -threads #-parallel
   LDFLAGS   += -threads
   OPTFLAGS  += -fopenmp
   ifneq (0,$(NESTED))
@@ -638,6 +638,10 @@ mp2_eri.o: mp2_eri.F
 	$(eval MAKE_FYPP := $(if $(wildcard $(TOOLSRC)/build_utils/fypp),$(TOOLSRC)/build_utils/fypp $(FYPPFLAGS) $< $*.F90,$(NULL)))
 	$(MAKE_FYPP)
 	$(FC) -c $(filter-out -qoverride_limits,$(FCFLAGS)) -D__SHORT_FILE__="\"$(subst $(SRCDIR)/,,$<)\"" -I'$(dir $<)' $*.F90 $(FCLOGPIPE)
+minimax_exp_k53.o: minimax_exp_k53.F
+	$(eval MAKE_FYPP := $(if $(wildcard $(TOOLSRC)/build_utils/fypp),$(TOOLSRC)/build_utils/fypp $(FYPPFLAGS) $< $*.F90,$(NULL)))
+	$(MAKE_FYPP)
+	$(FC) -c $(filter-out -qoverride_limits,$(FCFLAGS)) -D__SHORT_FILE__="\"$(subst $(SRCDIR)/,,$<)\"" -I'$(dir $<)' $*.F90 $(FCLOGPIPE)
 
 ifeq (1,$(shell echo $$((1 <= $(BEEP)))))
 helium_sampling.o: helium_sampling.F
@@ -652,12 +656,6 @@ qs_dispersion_nonloc.o: qs_dispersion_nonloc.F
 	$(eval MAKE_FYPP := $(if $(wildcard $(TOOLSRC)/build_utils/fypp),$(TOOLSRC)/build_utils/fypp $(FYPPFLAGS) $< $*.F90,$(NULL)))
 	$(MAKE_FYPP)
 	$(FC) -c $(FCFLAGS) -O$(OPT1) -D__SHORT_FILE__="\"$(subst $(SRCDIR)/,,$<)\"" -I'$(dir $<)' $*.F90 $(FCLOGPIPE)
-ifneq (0,$(OMP))
-minimax_exp_k53.o: minimax_exp_k53.F
-	$(eval MAKE_FYPP := $(if $(wildcard $(TOOLSRC)/build_utils/fypp),$(TOOLSRC)/build_utils/fypp $(FYPPFLAGS) $< $*.F90,$(NULL)))
-	$(MAKE_FYPP)
-	$(FC) -c $(filter-out -openmp -qopenmp -fopenmp,$(FCFLAGS)) -D__SHORT_FILE__="\"$(subst $(SRCDIR)/,,$<)\"" -I'$(dir $<)' $*.F90 $(FCLOGPIPE)
-endif
 endif
 
 # likely outdated or resolved

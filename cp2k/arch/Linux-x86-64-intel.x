@@ -287,7 +287,7 @@ ifneq (0,$(OMP))
 endif
 
 ifneq (,$(LIBINTROOT))
-  DFLAGS  += -D__LIBINT -D__LIBINT_MAX_AM=6 -D__LIBDERIV_MAX_AM1=5
+  DFLAGS  += -D__LIBINT -D__LIBINT_MAX_AM=6 -D__LIBDERIV_MAX_AM1=5 -D__MAX_CONTR=4
   IFLAGS  += -I$(LIBINTROOT)/include
   LIBS    += $(LIBINTROOT)/lib/libderiv.a $(LIBINTROOT)/lib/libint.a
 endif

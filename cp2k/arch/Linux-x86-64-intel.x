@@ -114,7 +114,7 @@ FPFLAGS += -complex-limited-range
 #FPFLAGS += -fimf-domain-exclusion=1
 
 # TBB malloc proxy is enabled if TBBROOT is set
-TBBMALLOC ?= 1
+TBBMALLOC ?= 0
 # TBB runtime compatible with oldest supported GCC
 TBBGCC_OLD ?= 1
 

@@ -53,17 +53,17 @@
 
 ! The CP_CONTIGUOUS macro may (or may not) expand to the CONTIGUOUS attribute
 ! depending on whether or not the compiler supports Fortran 2008. GNU Fortran
-! needs -std=f2008 to make CONTIGUOUS available, hence the CP_F2008 symbol
+! needs -std=f2008 to make CONTIGUOUS available, hence the __F2008 symbol
 ! needs to be present (no way to detect standard by using the preprocessor).
 !
-#if !defined(CP_DISABLE_ATTRIBS) && defined(CP_F2008) && \
-  defined(__GFORTRAN__) && (CP_VERSION3(4, 6, 0) <= CP_VERSION3(__GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__))
-# define CP_CONTIGUOUS CONTIGUOUS
-# define CP_COMMA_CONTIGUOUS , CONTIGUOUS
-#elif !defined(CP_DISABLE_ATTRIBS) && \
-  defined(__INTEL_COMPILER) && (1210 <= __INTEL_COMPILER)
-# define CP_CONTIGUOUS CONTIGUOUS
-# define CP_COMMA_CONTIGUOUS , CONTIGUOUS
+#if !defined(CP_DISABLE_ATTRIBS) && defined(__F2008)
+# if defined(__GFORTRAN__) && (CP_VERSION3(4, 6, 0) <= CP_VERSION3(__GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__))
+#   define CP_CONTIGUOUS CONTIGUOUS
+#   define CP_COMMA_CONTIGUOUS , CONTIGUOUS
+# elif defined(__INTEL_COMPILER) && (1210 <= __INTEL_COMPILER)
+#   define CP_CONTIGUOUS CONTIGUOUS
+#   define CP_COMMA_CONTIGUOUS , CONTIGUOUS
+# endif
 #else
 # define CP_CONTIGUOUS
 # define CP_COMMA_CONTIGUOUS

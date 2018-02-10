@@ -127,6 +127,9 @@ endif
 OPT1 = $(shell echo $$((1<$(OPT)?1:$(OPT))))
 OPT2 = $(shell echo $$((2<$(OPT)?2:$(OPT))))
 
+# more recent IFORT versions enable F2008 by default
+DFLAGS += -D__F2008
+
 ifeq (0,$(ATTRIBS))
   DFLAGS += -DCP_DISABLE_ATTRIBS
 endif

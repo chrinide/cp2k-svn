@@ -298,9 +298,15 @@ LIBXSMM_ACC_RETARGETABLE void work(const U *LIBXSMM_ACC_RESTRICT stack, size_t s
 #if defined(__LIBXSMM) && (0 != LIBXSMM_PREFETCH || 0 != LIBXSMM_JIT)
             smm(pcur[LIBXSMM_ACC_PARAM_M], pcur[LIBXSMM_ACC_PARAM_N], pcur[LIBXSMM_ACC_PARAM_K], ldc,
               a + pcur[LIBXSMM_ACC_PARAM_A] - 1, b + pcur[LIBXSMM_ACC_PARAM_B] - 1, tmp,
+# if LIBXSMM_VERSION4(1, 8, 3, 74) <= LIBXSMM_VERSION4(LIBXSMM_VERSION_MAJOR, LIBXSMM_VERSION_MINOR, LIBXSMM_VERSION_UPDATE, LIBXSMM_VERSION_PATCH)
+              LIBXSMM_GEMM_PREFETCH_A(a + pnxt[LIBXSMM_ACC_PARAM_A] - 1),
+              LIBXSMM_GEMM_PREFETCH_B(b + pnxt[LIBXSMM_ACC_PARAM_B] - 1),
+              LIBXSMM_GEMM_PREFETCH_C(ci));
+# else
               LIBXSMM_PREFETCH_A(a + pnxt[LIBXSMM_ACC_PARAM_A] - 1),
               LIBXSMM_PREFETCH_B(b + pnxt[LIBXSMM_ACC_PARAM_B] - 1),
               LIBXSMM_PREFETCH_C(ci));
+# endif
 #else
             smm(pcur[LIBXSMM_ACC_PARAM_M], pcur[LIBXSMM_ACC_PARAM_N], pcur[LIBXSMM_ACC_PARAM_K], ldc,
               a + pcur[LIBXSMM_ACC_PARAM_A] - 1, b + pcur[LIBXSMM_ACC_PARAM_B] - 1, tmp);

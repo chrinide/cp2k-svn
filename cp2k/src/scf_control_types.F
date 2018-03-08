@@ -155,6 +155,7 @@ MODULE scf_control_types
       !  1 when wave-function has been read from restart file, or
       !  2 when the atomic guess method has been used
       INTEGER       :: mom_start
+      INTEGER       :: mom_type
       REAL(KIND=dp) :: eps_iter
       REAL(KIND=dp) :: eps_adapt
       TYPE(qs_ot_settings_type) :: ot_settings
@@ -460,6 +461,9 @@ CONTAINS
          CALL section_vals_val_get(scf_section, "MOM%_SECTION_PARAMETERS_", &
                                    l_val=scf_control%diagonalization%MOM)
          IF (scf_control%diagonalization%mom) THEN
+            CALL section_vals_val_get(scf_section, "MOM%MOM_TYPE", &
+                                      i_val=scf_control%diagonalization%mom_type)
+
             CALL section_vals_val_get(scf_section, "MOM%START_ITER", &
                                       i_val=scf_control%diagonalization%mom_start)
 
@@ -521,7 +525,7 @@ CONTAINS
 
       IF (scf_control%level_shift /= 0.0_dp) scf_control%use_cholesky = .FALSE.
       IF (scf_control%use_ot .AND. (scf_control%density_guess == core_guess)) THEN
-         CPABORT("Use GUESS {ATOMIC,RESTART,RANDOM} with OT")
+         CPABORT("SCF_GUESS CORE is not supported for OT")
       END IF
 
       outer_scf_section => section_vals_get_subs_vals(scf_section, "OUTER_SCF")

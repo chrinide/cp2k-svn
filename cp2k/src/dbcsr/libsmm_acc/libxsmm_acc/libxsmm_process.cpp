@@ -207,11 +207,14 @@ private:
     static float alpha = 1.f, beta = 1.f;
     static char trans = 'N';
     int im = static_cast<int>(m), in = static_cast<int>(n), ik = static_cast<int>(k), ildc = static_cast<int>(ldc);
-#if defined(__LIBXSMM) && LIBXSMM_VERSION4(1, 5, 0, 0) <= LIBXSMM_VERSION4(LIBXSMM_VERSION_MAJOR, LIBXSMM_VERSION_MINOR, \
+#if defined(__LIBXSMM) && LIBXSMM_VERSION4(1, 5, 0, 0) <= LIBXSMM_VERSION4(LIBXSMM_VERSION_MAJOR,  LIBXSMM_VERSION_MINOR, \
                                                                            LIBXSMM_VERSION_UPDATE, LIBXSMM_VERSION_PATCH)
     // original symbol, which avoids to go through the wrapper
-# if LIBXSMM_VERSION4(1, 8, 1, 1113) <= LIBXSMM_VERSION4(LIBXSMM_VERSION_MAJOR, LIBXSMM_VERSION_MINOR, \
-                                                         LIBXSMM_VERSION_UPDATE, LIBXSMM_VERSION_PATCH)
+# if LIBXSMM_VERSION4(1, 9, 0, 11)      <= LIBXSMM_VERSION4(LIBXSMM_VERSION_MAJOR,  LIBXSMM_VERSION_MINOR, \
+                                                            LIBXSMM_VERSION_UPDATE, LIBXSMM_VERSION_PATCH)
+    LIBXSMM_BLAS_FUNCTION(float, float, gemm)
+# elif LIBXSMM_VERSION4(1, 8, 1, 1113)  <= LIBXSMM_VERSION4(LIBXSMM_VERSION_MAJOR,  LIBXSMM_VERSION_MINOR, \
+                                                            LIBXSMM_VERSION_UPDATE, LIBXSMM_VERSION_PATCH)
     LIBXSMM_ORIGINAL_GEMM(float)
 # else
     LIBXSMM_BLAS_GEMM_SYMBOL(float)
@@ -229,8 +232,11 @@ private:
 #if defined(__LIBXSMM) && LIBXSMM_VERSION4(1, 5, 0, 0) <= LIBXSMM_VERSION4(LIBXSMM_VERSION_MAJOR, LIBXSMM_VERSION_MINOR, \
                                                                            LIBXSMM_VERSION_UPDATE, LIBXSMM_VERSION_PATCH)
     // original symbol, which avoids to go through the wrapper
-# if LIBXSMM_VERSION4(1, 8, 1, 1113) <= LIBXSMM_VERSION4(LIBXSMM_VERSION_MAJOR, LIBXSMM_VERSION_MINOR, \
-                                                         LIBXSMM_VERSION_UPDATE, LIBXSMM_VERSION_PATCH)
+# if LIBXSMM_VERSION4(1, 9, 0, 11)      <= LIBXSMM_VERSION4(LIBXSMM_VERSION_MAJOR,  LIBXSMM_VERSION_MINOR, \
+                                                            LIBXSMM_VERSION_UPDATE, LIBXSMM_VERSION_PATCH)
+    LIBXSMM_BLAS_FUNCTION(double, double, gemm)
+# elif LIBXSMM_VERSION4(1, 8, 1, 1113)  <= LIBXSMM_VERSION4(LIBXSMM_VERSION_MAJOR,  LIBXSMM_VERSION_MINOR, \
+                                                            LIBXSMM_VERSION_UPDATE, LIBXSMM_VERSION_PATCH)
     LIBXSMM_ORIGINAL_GEMM(double)
 # else
     LIBXSMM_BLAS_GEMM_SYMBOL(double)

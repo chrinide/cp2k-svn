@@ -186,7 +186,7 @@ CONTAINS
       CALL timeset(routineN, handle)
 
       IF (ASSOCIATED(area%d)) &
-         CPABORT("area already associcated")
+         CPABORT("area already associated")
 
       my_memory_type = dbcsr_memtype_default
       IF (PRESENT(memory_type)) my_memory_type = memory_type

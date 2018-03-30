@@ -529,7 +529,7 @@
 !> There are no checks done for correctness!
 !> \param[in] dst        destination data area
 !> \param[in] lb         lower bound for destination (and source if
-!>                       not given explicity)
+!>                       not given explicitly)
 !> \param[in] data_size  number of elements to copy
 !> \param[in] src        source data array
 !> \param[in] source_lb  (optional) lower bound of source

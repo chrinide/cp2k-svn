@@ -365,7 +365,9 @@ ifneq (,$(wildcard $(LIBSMM_LIB))) # LIBSMM successfully downloaded
 endif
 
 ifneq (,$(LIBXSMMROOT))
-  LIBXSMM ?= 1
+  # 1: Small Multiplications, 2: 1+Transposes, 3: 2+All GEMMs
+  #
+  LIBXSMM ?= 2
   ifneq (0,$(LIBXSMM))
     $(info ================================================================================)
     $(info Automatically enabled LIBXSMM $(shell $(LIBXSMMROOT)/scripts/libxsmm_utilities.py 2> /dev/null))

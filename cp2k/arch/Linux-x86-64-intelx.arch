@@ -4,36 +4,9 @@ PERL     = perl
 CPP      = #cpp
 AR       = xiar -r
 
-# LIBINT: configure, build, and install
-# Version 1.1.5 and 1.1.6 (tested)
-#
-# $ env \
-#   AR=xiar CC=icc CXX=icpc \
-#   ./configure --prefix=$HOME/libint \
-#     --with-cc-optflags="-O1 -xHost" \
-#     --with-cxx-optflags="-O1 -xHost" \
-#     --with-libint-max-am=5 \
-#     --with-libderiv-max-am1=4
-# $ make
-# $ make install
-# $ make realclean
-#
-#LIBINTROOT = $(HOME)/libint
-
-# LIBXC: configure, build, and install
-# Version 2.2.2 and 3.0.0 (tested)
-#
-# $ autoreconf --force --install
-# $ env \
-#   AR=xiar \
-#   FC=ifort F77=ifort F90=ifort FCFLAGS="-O2 -xHost" \
-#   CC=icc CFLAGS="-O2 -xHost" \
-#   ./configure --prefix=$HOME/libxc
-# $ make
-# $ make install
-# $ make clean
-#
-#LIBXCROOT = $(HOME)/libxc
+# LIBINT: https://xconfigure.readthedocs.io/libint/README/
+# LIBXC:  https://xconfigure.readthedocs.io/libxc/README/
+# ELPA:   https://xconfigure.readthedocs.io/elpa/README/
 
 # LIBXSMM (https://github.com/hfp/libxsmm)
 #
@@ -287,7 +260,7 @@ ifneq (0,$(OMP))
 endif
 
 ifneq (,$(LIBINTROOT))
-  DFLAGS  += -D__LIBINT -D__LIBINT_MAX_AM=6 -D__LIBDERIV_MAX_AM1=5 -D__MAX_CONTR=4
+  DFLAGS  += -D__LIBINT -D__LIBINT_MAX_AM=7 -D__LIBDERIV_MAX_AM1=6 -D__MAX_CONTR=4
   IFLAGS  += -I$(LIBINTROOT)/include
   LIBS    += $(LIBINTROOT)/lib/libderiv.a $(LIBINTROOT)/lib/libint.a
 endif

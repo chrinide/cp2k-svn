@@ -1,4 +1,4 @@
-!&--------------------------------------------------------------------------------------------------!
+!--------------------------------------------------------------------------------------------------!
 !   CP2K: A general program to perform molecular dynamics simulations                              !
 !   Copyright (C) 2000 - 2018  CP2K developers group                                               !
 !--------------------------------------------------------------------------------------------------!
@@ -285,6 +285,7 @@ CONTAINS
       TYPE(cp_blacs_env_type), POINTER                   :: blacs_env
       TYPE(cp_fm_struct_type), POINTER                   :: fm_struct
       TYPE(cp_para_env_type), POINTER                    :: para_env
+
       !TYPE(pw_env_type), POINTER                         :: pw_env
       !TYPE(pw_pool_type), POINTER                        :: auxbas_pw_pool
 
@@ -360,7 +361,7 @@ CONTAINS
          ! Release blacs environment
          CALL cp_blacs_env_release(blacs_env)
 
-      !ELSE ! Grid-based optimization
+         !ELSE ! Grid-based optimization
          !my_spins = 1
          !IF (opt_embed%open_shell_embed) my_spins = 2
          !CALL get_qs_env(qs_env=qs_env, pw_env=pw_env)
@@ -691,9 +692,9 @@ CONTAINS
          CALL cp_fm_release(opt_embed%embed_pot_grad)
          CALL cp_fm_release(opt_embed%embed_pot_coef)
          CALL cp_fm_release(opt_embed%step)
-      
+
          CALL cp_fm_release(opt_embed%prev_step)
-      
+
          CALL cp_fm_release(opt_embed%embed_pot_hess)
          CALL cp_fm_release(opt_embed%prev_embed_pot_grad)
          CALL cp_fm_release(opt_embed%prev_embed_pot_coef)
@@ -706,19 +707,19 @@ CONTAINS
          ENDIF
          DEALLOCATE (opt_embed%max_diff)
          DEALLOCATE (opt_embed%int_diff)
-      
+
          DO ikind = 1, SIZE(opt_embed%lri)
             DEALLOCATE (opt_embed%lri(ikind)%v_int)
             DEALLOCATE (opt_embed%lri(ikind)%acoef)
          ENDDO
          DEALLOCATE (opt_embed%lri)
-      !ELSE
-      !DO ispin = 1, SIZE(opt_embed%prev_grid_pot)
-      !   CALL pw_release(opt_embed%prev_grid_pot(ispin)%pw)
-      !   CALL pw_release(opt_embed%prev_grid_grad(ispin)%pw)
-      !ENDDO
-      !DEALLOCATE (opt_embed%prev_grid_pot)
-      !DEALLOCATE (opt_embed%prev_grid_grad)
+         !ELSE
+         !DO ispin = 1, SIZE(opt_embed%prev_grid_pot)
+         !   CALL pw_release(opt_embed%prev_grid_pot(ispin)%pw)
+         !   CALL pw_release(opt_embed%prev_grid_grad(ispin)%pw)
+         !ENDDO
+         !DEALLOCATE (opt_embed%prev_grid_pot)
+         !DEALLOCATE (opt_embed%prev_grid_grad)
       ENDIF
 
    END SUBROUTINE release_opt_embed
@@ -1125,6 +1126,7 @@ CONTAINS
             CALL cp_fm_scale_and_add(0.0_dp, opt_embed%prev_step, 1.0_dp, opt_embed%step)
             CALL cp_fm_set_all(opt_embed%step, 0.0_dp)
             CALL cp_fm_scale_and_add(1.0_dp, opt_embed%step, opt_embed%trust_rad, opt_embed%embed_pot_grad)
+            opt_embed%step_len = opt_embed%trust_rad
          ELSE
 
             ! First, update the Hessian inverse if needed
@@ -1267,11 +1269,12 @@ CONTAINS
 
       CALL timeset(routineN, handle)
 
+      opt_embed%step_len = opt_embed%trust_rad
       ! Take the step for spin-free part
-      CALL pw_axpy(diff_rho_r%pw, embed_pot%pw, opt_embed%trust_rad)
+      CALL pw_axpy(diff_rho_r%pw, embed_pot%pw, opt_embed%step_len)
 
       IF (opt_embed%open_shell_embed) THEN
-         CALL pw_axpy(diff_rho_spin%pw, spin_embed_pot%pw, opt_embed%trust_rad)
+         CALL pw_axpy(diff_rho_spin%pw, spin_embed_pot%pw, opt_embed%step_len)
       ENDIF
 
       CALL timestop(handle)

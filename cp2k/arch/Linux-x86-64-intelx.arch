@@ -118,7 +118,7 @@ ifeq (1,$(shell echo $$((2 > $(DBG)))))
   ifeq (1,$(AVX))
     TARGET = -xAVX
   else ifeq (2,$(AVX))
-    TARGET = -xCORE-AVX2
+    TARGET = -march=core-avx2
   else ifeq (3,$(AVX))
     ifeq (0,$(MIC))
       ifneq (file,$(origin MIC))

@@ -4,7 +4,7 @@
 
 set -e
 
-echo -e "\n========== Rsyncing =========="
+echo -e "\n========== Copying Changed Files =========="
 rsync --exclude="*~"          \
       --exclude=".*/"         \
       --exclude="*.pyc"       \
@@ -18,10 +18,8 @@ rsync --exclude="*~"          \
       --checksum              \
       /opt/cp2k-local/  /opt/cp2k-master/
 
-echo -e "\n========== Running Conventions test =========="
-source /opt/cp2k-toolchain/install/setup
-cd /opt/cp2k-master/cp2k/tools/conventions/
-#TODO port to Python3
-./test_conventions.sh
+echo -e "\n========== Running Formatting Test =========="
+cd /opt/cp2k-master/cp2k
+./tools/formatting/test_formatting.sh
 
 #EOF

@@ -113,7 +113,7 @@ int transpose(const U* stack, U offset, U nblocks, U m, U n, void* data, void* s
     else
 #endif
     {
-      kernel(stack + offset, &nblocks, &m, &n, static_cast<T*>(data))
+      kernel(stack + offset, &nblocks, &m, &n, static_cast<T*>(data));
     }
   }
 

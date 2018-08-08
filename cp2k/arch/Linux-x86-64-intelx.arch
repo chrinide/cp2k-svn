@@ -576,7 +576,7 @@ ifneq (0,$(RECONFIGURE))
 endif
 
 # check if the Intel Development Tools are available
-INTEL ?= $(shell echo "$$((2==$(words $(filter icpc icc, \
+INTEL ?= $(shell echo "$$((2==$(words $(filter icpc icpx icc icx, \
   $(shell $(CXX) --version 2> /dev/null | head -n1 | cut -d' ' -f1) \
   $(shell $(CC) --version 2> /dev/null | head -n1 | cut -d' ' -f1)))))")
 ifeq (0,$(INTEL))

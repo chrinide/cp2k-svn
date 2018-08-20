@@ -367,7 +367,7 @@ ifneq (,$(LIBXSMMROOT))
     # enable additional use cases for LIBXSMM
     ifeq (1,$(shell echo $$((1 < $(LIBXSMM)))))
       DFLAGS += -D__LIBXSMM_TRANS
-      # substitute "big" xGEMM calls with LIBXSMM
+      # substitute all GEMM calls with LIBXSMM
       ifeq (1,$(shell echo $$((2 < $(LIBXSMM)))))
         WRAP ?= 1
         ifeq (2,$(WRAP))
@@ -395,7 +395,7 @@ ifneq (,$(LIBXSMMROOT))
       BLDDIR=$(MAINOBJDIR)/$(ARCH)/$(ONEVERSION)/libxsmm/build \
       BINDIR=$(MAINOBJDIR)/$(ARCH)/$(ONEVERSION)/libxsmm/bin \
       OUTDIR=$(MAINLIBDIR)/$(ARCH)/$(ONEVERSION)/libxsmm/lib \
-      INIT=0 WRAP=$(WRAP) JIT=$(JIT) SYM=$(SYM) DBG=$(DBG) \
+      INIT=0 WRAP=$(WRAP) GEMM=$(GEMM) JIT=$(JIT) SYM=$(SYM) DBG=$(DBG) \
       MNK=$(LIBXSMM_MNK) M=$(LIBXSMM_M) N=$(LIBXSMM_N) K=$(LIBXSMM_K) PRECISION=2 \
       OPT=$(OPT) IPO=$(IPO) TARGET="$(TARGET)" SSE=$(SSE) AVX=$(AVX) MIC=$(MIC) \
       MPSS=$(LIBXSMM_MPSS) OFFLOAD=$(OFFLOAD) >&2)

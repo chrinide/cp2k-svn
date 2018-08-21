@@ -57,6 +57,10 @@ OFFLOAD ?= 0
 NESTED ?= 0
 ELPA ?= 201705
 
+ifneq (0,$(DBG))
+  OPT = 0
+endif
+
 # Workaround (see bottom of this file); disabled for older
 # versions of CP2K (use recommended toolchain!) due to
 # fypp preprocessed files, renamed translation units, etc.
@@ -156,7 +160,7 @@ ifeq (0,$(DBG))
   FCFLAGS   += -align array64byte     $(FPFMODEL) $(FPFLAGS) -nostandard-realloc-lhs
   #LDFLAGS   += $(NULL)
 else
-  OPTFLAGS += -O0
+  OPTFLAGS += -O$(OPT)
   CXXFLAGS := -debug $(CXXFLAGS)
   CFLAGS := -debug $(CFLAGS)
   FCFLAGS := -debug $(FCFLAGS)

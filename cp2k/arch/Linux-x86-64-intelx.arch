@@ -270,7 +270,7 @@ ifneq (,$(LIBINTROOT))
 endif
 
 ifneq (,$(LIBXCROOT))
-  DFLAGS  += -D__LIBXC2
+  DFLAGS  += -D__LIBXC
   IFLAGS  += -I$(LIBXCROOT)/include
   LIBS    += $(LIBXCROOT)/lib/libxcf90.a $(LIBXCROOT)/lib/libxc.a
 endif

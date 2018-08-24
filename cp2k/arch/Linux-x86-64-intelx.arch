@@ -80,9 +80,7 @@ else
 endif
 
 # consider more accurate FP-model
-FPCMODEL = precise
 #FPCMODEL = fast=2
-FPFMODEL = source
 #FPFMODEL = fast=2
 
 # FP compiler flags
@@ -109,13 +107,6 @@ DFLAGS += -D__F2008
 
 ifeq (0,$(ATTRIBS))
   DFLAGS += -DCP_DISABLE_ATTRIBS
-endif
-
-ifneq (,$(strip $(FPCMODEL)))
-  FPCMODEL := -fp-model $(FPCMODEL)
-endif
-ifneq (,$(strip $(FPFMODEL)))
-  FPFMODEL := -fp-model $(FPFMODEL)
 endif
 
 ifeq (1,$(shell echo $$((2 > $(DBG)))))
@@ -151,24 +142,6 @@ OPTFLAGS  = $(TARGET)
 # workaround for issue "cannot find address of function"
 #ATTRIBUTE = mic
 #DIAG_DISABLE := $(DIAG_DISABLE),2571,3218
-
-ifeq (0,$(DBG))
-  OPTFLAGS  += -O$(OPT) -qoverride_limits
-  DFLAGS    += -DNDEBUG
-  CXXFLAGS  += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
-  CFLAGS    += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
-  FCFLAGS   += -align array64byte     $(FPFMODEL) $(FPFLAGS) -nostandard-realloc-lhs
-  #LDFLAGS   += $(NULL)
-else
-  OPTFLAGS += -O$(OPT)
-  CXXFLAGS := -debug $(CXXFLAGS)
-  CFLAGS := -debug $(CFLAGS)
-  FCFLAGS := -debug $(FCFLAGS)
-  ifeq (2,$(DBG))
-    FCFLAGS += -fpe0 # debugging NaNs
-  endif
-  SYM = $(DBG)
-endif
 
 ifneq (0,$(SYM))
   DFLAGS += -D__USE_CP2K_TRACE
@@ -252,6 +225,33 @@ endif
 # workaround for certain bits introduced by GCC 7.0
 ifneq (0,$(shell echo "$$((180001 > $(CC_VERSION) && 0 != $(CC_VERSION)))"))
   CFLAGS += -D_Float128=__float128
+  FPCMODEL ?= precise
+  FPFMODEL ?= source  
+endif
+
+ifneq (,$(strip $(FPCMODEL)))
+  FPCMODEL := -fp-model $(FPCMODEL)
+endif
+ifneq (,$(strip $(FPFMODEL)))
+  FPFMODEL := -fp-model $(FPFMODEL)
+endif
+
+ifeq (0,$(DBG))
+  OPTFLAGS  += -O$(OPT) -qoverride_limits
+  DFLAGS    += -DNDEBUG
+  CXXFLAGS  += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
+  CFLAGS    += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
+  FCFLAGS   += -align array64byte     $(FPFMODEL) $(FPFLAGS) -nostandard-realloc-lhs
+  #LDFLAGS   += $(NULL)
+else
+  OPTFLAGS += -O$(OPT)
+  CXXFLAGS := -debug $(CXXFLAGS)
+  CFLAGS := -debug $(CFLAGS)
+  FCFLAGS := -debug $(FCFLAGS)
+  ifeq (2,$(DBG))
+    FCFLAGS += -fpe0 # debugging NaNs
+  endif
+  SYM = $(DBG)
 endif
 
 ifneq (0,$(OMP))

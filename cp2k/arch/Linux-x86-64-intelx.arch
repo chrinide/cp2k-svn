@@ -145,7 +145,7 @@ OPTFLAGS  = $(TARGET)
 
 ifneq (0,$(SYM))
   DFLAGS += -D__USE_CP2K_TRACE
-  OPTFLAGS  += -traceback
+  OPTFLAGS += -traceback
   LDFLAGS += -Wl,--export-dynamic
   ifneq (1,$(SYM))
     CXXFLAGS := -ggdb3 $(CXXFLAGS)
@@ -237,12 +237,12 @@ ifneq (,$(strip $(FPFMODEL)))
 endif
 
 ifeq (0,$(DBG))
-  OPTFLAGS  += -O$(OPT) -qoverride_limits
-  DFLAGS    += -DNDEBUG
-  CXXFLAGS  += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
-  CFLAGS    += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
-  FCFLAGS   += -align array64byte     $(FPFMODEL) $(FPFLAGS) -nostandard-realloc-lhs
-  #LDFLAGS   += $(NULL)
+  OPTFLAGS += -O$(OPT) -qoverride_limits
+  DFLAGS   += -DNDEBUG
+  CXXFLAGS += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
+  CFLAGS   += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
+  FCFLAGS  += -align array64byte     $(FPFMODEL) $(FPFLAGS) -nostandard-realloc-lhs
+  #LDFLAGS  += $(NULL)
 else
   OPTFLAGS += -O$(OPT)
   CXXFLAGS := -debug $(CXXFLAGS)
@@ -255,33 +255,33 @@ else
 endif
 
 ifneq (0,$(OMP))
-  FCFLAGS   += -threads #-parallel
-  LDFLAGS   += -threads
-  OPTFLAGS  += -fopenmp
+  FCFLAGS  += -threads #-parallel
+  LDFLAGS  += -threads
+  OPTFLAGS += -fopenmp
   ifneq (0,$(NESTED))
     DFLAGS += -D__NESTED_OPENMP
   endif
 endif
 
 ifneq (,$(LIBINTROOT))
-  DFLAGS  += -D__LIBINT -D__LIBINT_MAX_AM=7 -D__LIBDERIV_MAX_AM1=6 -D__MAX_CONTR=4
-  IFLAGS  += -I$(LIBINTROOT)/include
-  LIBS    += $(LIBINTROOT)/lib/libderiv.a $(LIBINTROOT)/lib/libint.a
+  DFLAGS += -D__LIBINT -D__LIBINT_MAX_AM=7 -D__LIBDERIV_MAX_AM1=6 -D__MAX_CONTR=4
+  IFLAGS += -I$(LIBINTROOT)/include
+  LIBS   += $(LIBINTROOT)/lib/libderiv.a $(LIBINTROOT)/lib/libint.a
 endif
 
 ifneq (,$(LIBXCROOT))
-  DFLAGS  += -D__LIBXC
-  IFLAGS  += -I$(LIBXCROOT)/include
-  LIBS    += $(LIBXCROOT)/lib/libxcf03.a $(LIBXCROOT)/lib/libxc.a
+  DFLAGS += -D__LIBXC
+  IFLAGS += -I$(LIBXCROOT)/include
+  LIBS   += $(LIBXCROOT)/lib/libxcf03.a $(LIBXCROOT)/lib/libxc.a
 endif
 
 ifneq (,$(ELPAROOT))
   ifneq (0,$(ELPA))
-    DFLAGS  += -D__ELPA=$(ELPA)
+    DFLAGS += -D__ELPA=$(ELPA)
     ELPAINCDIR = $(dir $(shell ls -1 $(ELPAROOT)/include/*/elpa/elpa_*constants.h | head -n1))
     ELPAMODDIR = $(ELPAINCDIR)../modules
     IFLAGS += -I$(ELPAINCDIR) -I$(ELPAMODDIR)
-    LIBS   += $(ELPAROOT)/lib/libelpa.a
+    LIBS += $(ELPAROOT)/lib/libelpa.a
     # in case ELPA is built with OpenMP
     ifeq (0,$(OMP))
       LIBS += -Wl,--as-needed -liomp5 -Wl,--no-as-needed
@@ -337,8 +337,8 @@ ifneq (0,$(LIBSMM))
   LIBSMM_LIB = $(TOOLSRC)/toolchain/install/lib/libsmm_dnn.a
 endif
 ifneq (,$(wildcard $(LIBSMM_LIB))) # LIBSMM successfully downloaded
-  DFLAGS  += -D__HAS_smm_dnn
-  LIBS    += $(LIBSMM_LIB)
+  DFLAGS += -D__HAS_smm_dnn
+  LIBS += $(LIBSMM_LIB)
 endif
 
 ifneq (,$(LIBXSMMROOT))
@@ -429,8 +429,8 @@ ifneq (0,$(ACC))
       endif
     endif
   else
-    DFLAGS  += -D__OPENCL -D__USE_INTEL_CL
-    LIBS    += -L/usr/lib64 -lOpenCL -lrt
+    DFLAGS += -D__OPENCL -D__USE_INTEL_CL
+    LIBS += -L/usr/lib64 -lOpenCL -lrt
   endif
 else
   ifeq (0,$(OFFLOAD))
@@ -450,9 +450,9 @@ ifneq (,$(LIBXSTREAMROOT))
     OFFLOAD=$(OFFLOAD) MIC=$(MIC) \
   >&2)
 
-  DFLAGS  += -D__LIBXSTREAM
-  IFLAGS  += -I$(LIBXSTREAMROOT)/include
-  LIBS    += $(MAINLIBDIR)/$(ARCH)/$(ONEVERSION)/libxstream/libxstream.a
+  DFLAGS += -D__LIBXSTREAM
+  IFLAGS += -I$(LIBXSTREAMROOT)/include
+  LIBS   += $(MAINLIBDIR)/$(ARCH)/$(ONEVERSION)/libxstream/libxstream.a
 endif
 
 ifeq (1,$(MKL_DIRECT))
@@ -462,8 +462,8 @@ endif
 
 ifneq (1,$(MKL))
   ifneq (0,$(MKL)) # smp
-    DFLAGS  += -D__MKL -D__FFTW3
-    IFLAGS  +=-I$(MKLROOT)/include -I$(MKLROOT)/include/fftw
+    DFLAGS += -D__MKL -D__FFTW3
+    IFLAGS += -I$(MKLROOT)/include -I$(MKLROOT)/include/fftw
     ifeq (0,$(MKL_STATIC))
       LIBS += -L$(MKLROOT)/lib/intel64
       ifneq (0,$(MPI))
@@ -514,8 +514,8 @@ ifneq (1,$(MKL))
     LIBS += -Wl,--as-needed -lpthread -lm -Wl,--no-as-needed
   endif
 else # sequential
-  DFLAGS  += -D__MKL -D__FFTW3
-  IFLAGS  +=-I$(MKLROOT)/include -I$(MKLROOT)/include/fftw
+  DFLAGS += -D__MKL -D__FFTW3
+  IFLAGS += -I$(MKLROOT)/include -I$(MKLROOT)/include/fftw
   ifeq (0,$(MKL_STATIC))
     LIBS += -L$(MKLROOT)/lib/intel64
     ifneq (0,$(MPI))
@@ -591,12 +591,13 @@ ifeq (0,$(INTEL))
   $(error Intel Development Tools not found!)
 endif
 
-DFLAGS  += -D__INTEL -D__HAS_ISO_C_BINDING
-IFLAGS  += # general include paths
+DFLAGS += -D__INTEL -D__HAS_ISO_C_BINDING
+# general include paths
+#IFLAGS +=
 
 # Define __INTEL_COMPILER in case of external preprocessing because some source (pw/fft/fftw3_lib.F)
 # toggles code using this symbol, but of course the cpp preprocessor is not defining this symbol.
-CPPFLAGS  += #-C $(IFLAGS) $(DFLAGS) -D__INTEL_COMPILER -P -traditional
+CPPFLAGS += #-C $(IFLAGS) $(DFLAGS) -D__INTEL_COMPILER -P -traditional
 
 CXXFLAGS  += $(OPTFLAGS) -diag-disable $(DIAG_DISABLE) $(DFLAGS) $(IFLAGS)
 CFLAGS    += $(OPTFLAGS) -diag-disable $(DIAG_DISABLE) $(DFLAGS) $(IFLAGS)
@@ -607,11 +608,11 @@ LDFLAGS_C += $(OPTFLAGS) -diag-disable $(DIAG_DISABLE) -nofor_main
 LIBS += -Wl,--as-needed -lstdc++ -Wl,--no-as-needed
 ifneq (0,$(ACC))
   ifneq (0,$(OFFLOAD))
-    LIBS      += $(MIC_LDFLAGS)
-    CXXFLAGS  += $(MIC_CXFLAGS)
-    CFLAGS    += $(MIC_CCFLAGS)
-    FCFLAGS   += $(MIC_FCFLAGS)
-    #LDFLAGS   += $(MIC_LDFLAGS)
+    LIBS     += $(MIC_LDFLAGS)
+    CXXFLAGS += $(MIC_CXFLAGS)
+    CFLAGS   += $(MIC_CCFLAGS)
+    FCFLAGS  += $(MIC_FCFLAGS)
+    #LDFLAGS  += $(MIC_LDFLAGS)
   endif
 endif
 

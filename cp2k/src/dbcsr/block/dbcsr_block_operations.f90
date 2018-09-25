@@ -313,7 +313,7 @@
 !> \param[in] rows input matrix size
 !> \param[in] columns input matrix size
 ! **************************************************************************************************
-  CP_MKL_PURE SUBROUTINE block_transpose_copy_${nametype1}$(extent_out, extent_in,&
+  CP_PURE SUBROUTINE block_transpose_copy_${nametype1}$(extent_out, extent_in,&
        rows, columns)
 #if defined(__LIBXSMM_TRANS)
     USE libxsmm
@@ -408,7 +408,7 @@
 !> \param[in] rows input matrix size
 !> \param[in] columns input matrix size
 ! **************************************************************************************************
-  CP_MKL_PURE SUBROUTINE block_transpose_copy_2d1d_${nametype1}$(extent_out, extent_in,&
+  CP_PURE SUBROUTINE block_transpose_copy_2d1d_${nametype1}$(extent_out, extent_in,&
        rows, columns)
 #if defined(__LIBXSMM_TRANS)
     USE libxsmm
@@ -460,7 +460,7 @@
 !> \param[in] rows input matrix size
 !> \param[in] columns input matrix size
 ! **************************************************************************************************
-  CP_MKL_PURE SUBROUTINE block_transpose_copy_1d2d_${nametype1}$(extent_out, extent_in,&
+  CP_PURE SUBROUTINE block_transpose_copy_1d2d_${nametype1}$(extent_out, extent_in,&
        rows, columns)
 #if defined(__LIBXSMM_TRANS)
     USE libxsmm
@@ -490,7 +490,7 @@
 !> \param[in] rows input matrix size
 !> \param[in] columns input matrix size
 ! **************************************************************************************************
-  CP_MKL_PURE SUBROUTINE block_transpose_inplace_${nametype1}$(extent, rows, columns)
+  CP_PURE SUBROUTINE block_transpose_inplace_${nametype1}$(extent, rows, columns)
 #if defined(__LIBXSMM_TRANS)
     USE libxsmm
 #endif

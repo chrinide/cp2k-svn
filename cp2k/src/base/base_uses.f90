@@ -76,9 +76,9 @@
 # include <libxsmm_config.h>
 #endif
 
-#if defined(__MKL)
-# define CP_MKL_PURE
+#if defined(__MKL) || defined(__LIBXSMM)
+# define CP_PURE
 #else
-# define CP_MKL_PURE PURE
+# define CP_PURE PURE
 #endif
 

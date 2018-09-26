@@ -90,6 +90,62 @@ else
   ACC = 1
 endif
 
+SCALAPACK ?= 1
+ifneq (0,$(MPI))
+  ifeq (0,$(GNU))
+    CXX = mpiicpc
+    CC  = mpiicc
+    FC  = mpiifort
+    LD  = mpiifort
+  else
+    CXX = mpigxx
+    CC  = mpigcc
+    FC  = mpif90
+    LD  = mpif90
+  endif
+  DFLAGS += -D__parallel
+  ifneq (0,$(SCALAPACK))
+    DFLAGS += -D__BLACS -D__SCALAPACK
+    ifeq (0,$(shell echo $(SCALAPACK) | grep -q "^-*[0-9]\+$$"; echo $$?)) # number
+      ifneq (-1,$(SCALAPACK))
+        ifneq (1,$(SCALAPACK))
+          DFLAGS += -D__SCALAPACK$(SCALAPACK)
+        endif
+      else
+        SCALAPACKDIR = $(HOME)/scalapack-2.0.2
+      endif
+      ifeq (,$(SCALAPACKDIR))
+        SCALAPACKDIR = $(MKLROOT)/lib/intel64
+        SCALAPACKLIB = mkl_scalapack_lp64
+      else
+        ifeq (,$(SCALAPACKLIB))
+          SCALAPACKLIB = scalapack
+        endif
+        LIBS += -L$(SCALAPACKDIR)
+      endif
+    else # NaN
+      SCALAPACKDIR = $(SCALAPACK)
+      SCALAPACKLIB = scalapack
+      LIBS += -L$(SCALAPACKDIR)
+    endif
+  endif
+  ifneq (1,$(MPI))
+    DFLAGS += -D__MPI_VERSION=$(MPI)
+  else # default MPI std. version
+    DFLAGS += -D__MPI_VERSION=3
+  endif
+else ifeq (0,$(GNU))
+  CXX = icpc
+  CC  = icc
+  FC  = ifort
+  LD  = ifort
+else # GNU
+  CXX = g++
+  CC  = gcc
+  FC  = gfortran
+  LD  = gfortran
+endif
+
 # Diagnostic message to be turned off
 DIAG_DISABLE = 8290,8291,10010,10212,10411,11060
 
@@ -154,7 +210,7 @@ ifeq (0,$(GNU)) # Intel
   FCFLAGS += -free -fpp -heap-arrays
   # more recent IFORT versions enable F2008 by default
   DFLAGS += -D__INTEL -D__F2008
-  MKL_THREADS = intel
+  MKL_OMPRTL = intel
   MKL_FCRTL = intel
   AR = xiar -r
 else # GNU GCC
@@ -222,62 +278,6 @@ ifneq (0,$(SYM))
     CFLAGS := -g $(CFLAGS)
     FCFLAGS := -g $(FCFLAGS)
   endif
-endif
-
-SCALAPACK ?= 1
-ifneq (0,$(MPI))
-  ifeq (0,$(GNU))
-    CXX = mpiicpc
-    CC  = mpiicc
-    FC  = mpiifort
-    LD  = mpiifort
-  else
-    CXX = mpigxx
-    CC  = mpigcc
-    FC  = mpif90
-    LD  = mpif90
-  endif
-  DFLAGS += -D__parallel
-  ifneq (0,$(SCALAPACK))
-    DFLAGS += -D__BLACS -D__SCALAPACK
-    ifeq (0,$(shell echo $(SCALAPACK) | grep -q "^-*[0-9]\+$$"; echo $$?)) # number
-      ifneq (-1,$(SCALAPACK))
-        ifneq (1,$(SCALAPACK))
-          DFLAGS += -D__SCALAPACK$(SCALAPACK)
-        endif
-      else
-        SCALAPACKDIR = $(HOME)/scalapack-2.0.2
-      endif
-      ifeq (,$(SCALAPACKDIR))
-        SCALAPACKDIR = $(MKLROOT)/lib/intel64
-        SCALAPACKLIB = mkl_scalapack_lp64
-      else
-        ifeq (,$(SCALAPACKLIB))
-          SCALAPACKLIB = scalapack
-        endif
-        LIBS += -L$(SCALAPACKDIR)
-      endif
-    else # NaN
-      SCALAPACKDIR = $(SCALAPACK)
-      SCALAPACKLIB = scalapack
-      LIBS += -L$(SCALAPACKDIR)
-    endif
-  endif
-  ifneq (1,$(MPI))
-    DFLAGS += -D__MPI_VERSION=$(MPI)
-  else # default MPI std. version
-    DFLAGS += -D__MPI_VERSION=3
-  endif
-else ifeq (0,$(GNU))
-  CXX = icpc
-  CC  = icc
-  FC  = ifort
-  LD  = ifort
-else # GNU
-  CXX = g++
-  CC  = gcc
-  FC  = gfortran
-  LD  = gfortran
 endif
 
 CC_VERSION_STRING = $(shell $(CC) --version 2> /dev/null | head -n1 | sed "s/..* \([0-9][0-9]*\.[0-9][0-9]*\.*[0-9]*\)[ \S]*.*/\1/")
@@ -634,6 +634,14 @@ ifneq (0,$(OFFLOAD))
   #LDFLAGS  += $(MIC_LDFLAGS)
 endif
 endif
+
+cleanup = $(foreach flag,$1,$(flag))
+CXXFLAGS := $(call cleanup,$(CXXFLAGS))
+FCFLAGS := $(call cleanup,$(FCFLAGS))
+LDFLAGS := $(call cleanup,$(LDFLAGS))
+CFLAGS := $(call cleanup,$(CFLAGS))
+DFLAGS := $(call cleanup,$(DFLAGS))
+IFLAGS := $(call cleanup,$(IFLAGS))
 
 # filter-out override_limits flag since IFORT may run out of memory (SIGKILL)
 ifeq (0,$(GNU))

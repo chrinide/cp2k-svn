@@ -1,8 +1,7 @@
 # Arch file targeting Linux 64-bit using the Intel tool chain
 #
-PERL     = perl
-CPP      = #cpp
-AR       = xiar -r
+PERL = perl
+CPP  = #cpp
 
 # LIBINT: https://xconfigure.readthedocs.io/libint/README/
 # LIBXC:  https://xconfigure.readthedocs.io/libxc/README/
@@ -38,6 +37,7 @@ DIAG_DISABLE = 8290,8291,10010,10212,10411,11060
 
 # DEFAULTS
 #
+GNU ?= 0
 JIT ?= 1
 SSE ?= 0
 AVX ?= 0
@@ -51,21 +51,20 @@ DBG ?= 0
 IPO ?= 0
 MKL_DIRECT ?= 0
 MKL_STATIC ?= 1
-RECONFIGURE ?= 1
 MEMKIND ?= 1
 OFFLOAD ?= 0
 NESTED ?= 0
 ELPA ?= 201705
 
+ifeq (0,$(GNU))
+  RECONFIGURE ?= 1
+else
+  RECONFIGURE ?= 0
+endif
+
 ifneq (0,$(DBG))
   OPT = 0
 endif
-
-# Workaround (see bottom of this file); disabled for older
-# versions of CP2K (use recommended toolchain!) due to
-# fypp preprocessed files, renamed translation units, etc.
-#
-BEEP ?= $(if $(wildcard $(TOOLSRC)/build_utils/fypp),1,0)
 
 # CP2K's configuration namespace (prefix)
 #
@@ -102,42 +101,62 @@ endif
 OPT1 = $(shell echo $$((1<$(OPT)?1:$(OPT))))
 OPT2 = $(shell echo $$((2<$(OPT)?2:$(OPT))))
 
-# more recent IFORT versions enable F2008 by default
-DFLAGS += -D__F2008
-
 ifeq (0,$(ATTRIBS))
   DFLAGS += -DCP_DISABLE_ATTRIBS
 endif
 
-ifeq (1,$(shell echo $$((2 > $(DBG)))))
-  ifeq (1,$(AVX))
-    TARGET = -xAVX
-  else ifeq (2,$(AVX))
-    TARGET = -march=core-avx2
-  else ifeq (3,$(AVX))
-    ifeq (0,$(MIC))
-      ifneq (file,$(origin MIC))
-        TARGET = -xCORE-AVX512 -qopt-zmm-usage=high
+# initial build flags
+ifeq (0,$(GNU)) # Intel
+  FCFLAGS += -free -fpp -heap-arrays
+  ifeq (1,$(shell echo $$((2 > $(DBG)))))
+    ifeq (1,$(AVX))
+      TARGET = -xAVX
+    else ifeq (2,$(AVX))
+      TARGET = -march=core-avx2
+    else ifeq (3,$(AVX))
+      ifeq (0,$(MIC))
+        ifneq (file,$(origin MIC))
+          TARGET = -xCORE-AVX512 -qopt-zmm-usage=high
+        else
+          TARGET = -xCOMMON-AVX512
+        endif
       else
-        TARGET = -xCOMMON-AVX512
+        TARGET = -xMIC-AVX512
       endif
+    else ifneq (0,$(SSE))
+      TARGET = -xSSE3
     else
-      TARGET = -xMIC-AVX512
+      TARGET = -xHost
     endif
-  else ifneq (0,$(SSE))
-    TARGET = -xSSE3
-  else
-    TARGET = -xHost
+  endif
+else
+  FCFLAGS += -ffree-form -ffree-line-length-none
+  ifeq (1,$(shell echo $$((2 > $(DBG)))))
+    ifeq (1,$(AVX))
+      TARGET = -mavx
+    else ifeq (2,$(AVX))
+      TARGET = -march=core-avx2
+    else ifeq (3,$(AVX))
+      ifeq (0,$(MIC))
+        ifneq (file,$(origin MIC)) # AVX512/Core
+          TARGET = -mavx512f -mavx512cd -mavx512dq -mavx512bw -mavx512vl
+        else # AVX512F
+          TARGET = -mavx512f -mavx512cd
+        endif
+      else # AVX512/MIC
+        TARGET = -mavx512f -mavx512cd -mavx512pf -mavx512er
+      endif
+    else ifneq (0,$(SSE))
+      TARGET = -mSSE3
+    else
+      TARGET = -march=native
+    endif
   endif
 endif
-
-# initial build flags
-CPPFLAGS  = #
-CXXFLAGS  = -std=c++0x
-CFLAGS    = #
-FCFLAGS   = -free -fpp -heap-arrays
 LDFLAGS  += #-static-intel -static-libgcc -static-libstdc++
 OPTFLAGS  = $(TARGET)
+CXXFLAGS  = #-std=c++0x
+CFLAGS    = #
 
 # workaround for issue "cannot find address of function"
 #ATTRIBUTE = mic
@@ -158,18 +177,57 @@ ifneq (0,$(SYM))
   endif
 endif
 
-ifneq (0,$(IPO))
-  OPTFLAGS += -ipo-separate
-else ifeq (0,$(IPO))
-  LDFLAGS += -no-ipo
+ifeq (0,$(GNU))
+  # check if the Intel Development Tools are available
+  INTEL ?= $(shell echo "$$((2==$(words $(filter icpc icpx icc icx, \
+    $(shell $(CXX) --version 2> /dev/null | head -n1 | cut -d' ' -f1) \
+    $(shell $(CC) --version 2> /dev/null | head -n1 | cut -d' ' -f1)))))")
+  ifeq (0,$(INTEL))
+    $(info ================================================================================)
+    $(info This ARCH file relies on Intel Compiler and Libraries. Please try the following:)
+    $(info $$ source /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64)
+    $(info ================================================================================)
+    $(error Intel Development Tools not found!)
+  endif
+  ifneq (0,$(IPO))
+    OPTFLAGS += -ipo-separate
+  else ifeq (0,$(IPO))
+    LDFLAGS += -no-ipo
+  endif
+  # more recent IFORT versions enable F2008 by default
+  DFLAGS += -D__INTEL -D__F2008
+  MKL_THREADS = intel
+  MKL_FCRTL = intel
+  AR = xiar -r
+else
+  ifeq (,$(MKLROOT))
+    $(info ================================================================================)
+    $(info This ARCH file relies on Intel Libraries. Please try the following:)
+    $(info $$ source /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64)
+	$(info Note: Intel MPI is also required.)
+    $(info ================================================================================)
+    $(error Intel MKL not found!)
+  endif
+  DFLAGS += -D__HAS_NO_MPI_MOD
+  INTEL ?= 0
+  MKL_OMPRTL = gnu
+  MKL_FCRTL = gf
+  AR = ar -r
 endif
 
 SCALAPACK ?= 1
 ifneq (0,$(MPI))
-  CXX = mpiicpc
-  CC  = mpiicc
-  FC  = mpiifort
-  LD  = mpiifort
+  ifeq (0,$(GNU))
+    CXX = mpiicpc
+    CC  = mpiicc
+    FC  = mpiifort
+    LD  = mpiifort
+  else
+    CXX = mpigxx
+    CC  = mpigcc
+    FC  = mpif90
+    LD  = mpif90
+  endif
   DFLAGS += -D__parallel
   ifneq (0,$(SCALAPACK))
     DFLAGS += -D__BLACS -D__SCALAPACK
@@ -201,11 +259,16 @@ ifneq (0,$(MPI))
   else # default MPI std. version
     DFLAGS += -D__MPI_VERSION=3
   endif
-else
+else ifeq (0,$(GNU))
   CXX = icpc
   CC  = icc
   FC  = ifort
   LD  = ifort
+else # GNU
+  CXX = g++
+  CC  = gcc
+  FC  = gfortran
+  LD  = gfortran
 endif
 
 CC_VERSION_STRING = $(shell $(CC) --version 2> /dev/null | head -n1 | sed "s/..* \([0-9][0-9]*\.[0-9][0-9]*\.*[0-9]*\)[ \S]*.*/\1/")
@@ -222,41 +285,61 @@ else
   CC_VERSION = 0
 endif
 
-# workaround for certain bits introduced by GCC 7.0
-ifneq (0,$(shell echo "$$((180001 > $(CC_VERSION) && 0 != $(CC_VERSION)))"))
-  CFLAGS += -D_Float128=__float128
-  FPCMODEL ?= precise
-  FPFMODEL ?= source  
+ifeq (0,$(GNU))
+  # workaround for certain bits introduced by GCC 7.0
+  ifneq (0,$(shell echo "$$((180001 > $(CC_VERSION) && 0 != $(CC_VERSION)))"))
+    CFLAGS += -D_Float128=__float128
+    FPCMODEL ?= precise
+    FPFMODEL ?= source  
+    # Workaround (see bottom of this file); disabled for older
+    # versions of CP2K (use recommended toolchain!) due to
+    # fypp preprocessed files, renamed translation units, etc.
+    #
+    BEEP ?= $(if $(wildcard $(TOOLSRC)/build_utils/fypp),1,0)
+  else
+  endif
+  ifneq (,$(strip $(FPCMODEL)))
+    FPCMODEL := -fp-model $(FPCMODEL)
+  endif
+  ifneq (,$(strip $(FPFMODEL)))
+    FPFMODEL := -fp-model $(FPFMODEL)
+  endif
+endif
+# default if not set earlier
+BEEP ?= 0
+
+ifeq (0,$(GNU))
 endif
 
-ifneq (,$(strip $(FPCMODEL)))
-  FPCMODEL := -fp-model $(FPCMODEL)
-endif
-ifneq (,$(strip $(FPFMODEL)))
-  FPFMODEL := -fp-model $(FPFMODEL)
-endif
 
 ifeq (0,$(DBG))
-  OPTFLAGS += -O$(OPT) -qoverride_limits
   DFLAGS   += -DNDEBUG
-  CXXFLAGS += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
-  CFLAGS   += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
-  FCFLAGS  += -align array64byte     $(FPFMODEL) $(FPFLAGS) -nostandard-realloc-lhs
+  OPTFLAGS += -O$(OPT)
+  ifeq (0,$(GNU))
+    OPTFLAGS += -qoverride_limits
+    CXXFLAGS += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
+    CFLAGS   += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
+    FCFLAGS  += -align array64byte     $(FPFMODEL) $(FPFLAGS) -nostandard-realloc-lhs
+  endif
   #LDFLAGS  += $(NULL)
 else
   OPTFLAGS += -O$(OPT)
-  CXXFLAGS := -debug $(CXXFLAGS)
-  CFLAGS := -debug $(CFLAGS)
-  FCFLAGS := -debug $(FCFLAGS)
-  ifeq (2,$(DBG))
-    FCFLAGS += -fpe0 # debugging NaNs
+  ifeq (0,$(GNU))
+    CXXFLAGS := -debug $(CXXFLAGS)
+    CFLAGS := -debug $(CFLAGS)
+    FCFLAGS := -debug $(FCFLAGS)
+    ifeq (2,$(DBG))
+      FCFLAGS += -fpe0 # debugging NaNs
+    endif
   endif
   SYM = $(DBG)
 endif
 
 ifneq (0,$(OMP))
-  FCFLAGS  += -threads #-parallel
-  LDFLAGS  += -threads
+  ifeq (0,$(GNU))
+    FCFLAGS  += -threads #-parallel
+    LDFLAGS  += -threads
+  endif
   OPTFLAGS += -fopenmp
   ifneq (0,$(NESTED))
     DFLAGS += -D__NESTED_OPENMP
@@ -408,7 +491,6 @@ endif
 
 ifneq (0,$(ACC))
   DFLAGS += -D__ACC -D__DBCSR_ACC
-
   ifeq (0,$(OCL))
     DFLAGS += -D__ACC_MIC
     ifeq (0,$(OFFLOAD))
@@ -432,12 +514,13 @@ ifneq (0,$(ACC))
     DFLAGS += -D__OPENCL -D__USE_INTEL_CL
     LIBS += -L/usr/lib64 -lOpenCL -lrt
   endif
-else
+else # ACC off
+  ifeq (0,$(GNU))
   ifeq (0,$(OFFLOAD))
     OPTFLAGS += -qno-offload
     LDFLAGS += -qoffload-option,mic,ld,"--unresolved-symbols=ignore-all"
   endif
-
+  endif
   # save some build time
   LIBXSTREAMROOT = $(NULL)
 endif
@@ -449,7 +532,6 @@ ifneq (,$(LIBXSTREAMROOT))
     SYM=$(SYM) DBG=$(DBG) IPO=$(IPO) \
     OFFLOAD=$(OFFLOAD) MIC=$(MIC) \
   >&2)
-
   DFLAGS += -D__LIBXSTREAM
   IFLAGS += -I$(LIBXSTREAMROOT)/include
   LIBS   += $(MAINLIBDIR)/$(ARCH)/$(ONEVERSION)/libxstream/libxstream.a
@@ -460,106 +542,62 @@ ifeq (1,$(MKL_DIRECT))
   DFLAGS += -DMKL_DIRECT_CALL_SEQ
 endif
 
-ifneq (1,$(MKL))
-  ifneq (0,$(MKL)) # smp
-    DFLAGS += -D__MKL -D__FFTW3
-    IFLAGS += -I$(MKLROOT)/include -I$(MKLROOT)/include/fftw
-    ifeq (0,$(MKL_STATIC))
-      LIBS += -L$(MKLROOT)/lib/intel64
-      ifneq (0,$(MPI))
-        MIC_LDFLAGS += -qoffload-option,mic,ld,"-L$(MKLROOT)/lib/mic -l$(SCALAPACKLIB) -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_intelmpi_lp64"
-        LIBS += -l$(SCALAPACKLIB) -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lmkl_blacs_intelmpi_lp64
-      else
-        MIC_LDFLAGS += -qoffload-option,mic,ld,"-L$(MKLROOT)/lib/mic -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread"
-        LIBS += -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread
-      endif
-    else # static
-      ifneq (0,$(MPI))
-        MIC_LDFLAGS += -qoffload-option,mic,ld," \
-          --start-group \
-            $(MKLROOT)/lib/mic/libmkl_scalapack_lp64.a \
-            $(MKLROOT)/lib/mic/libmkl_intel_lp64.a \
-            $(MKLROOT)/lib/mic/libmkl_core.a \
-            $(MKLROOT)/lib/mic/libmkl_intel_thread.a \
-            $(MKLROOT)/lib/mic/libmkl_blacs_intelmpi_lp64.a \
-          --end-group"
-        LIBS += \
-          -Wl,--start-group \
-            $(SCALAPACKDIR)/lib$(SCALAPACKLIB).a \
-            $(MKLROOT)/lib/intel64/libmkl_intel_lp64.a \
-            $(MKLROOT)/lib/intel64/libmkl_core.a \
-            $(MKLROOT)/lib/intel64/libmkl_intel_thread.a \
-            $(MKLROOT)/lib/intel64/libmkl_blacs_intelmpi_lp64.a \
-          -Wl,--end-group
-      else
-        MIC_LDFLAGS += -qoffload-option,mic,ld," \
-          --start-group \
-            $(MKLROOT)/lib/mic/libmkl_intel_lp64.a \
-            $(MKLROOT)/lib/mic/libmkl_core.a \
-            $(MKLROOT)/lib/mic/libmkl_intel_thread.a \
-          --end-group"
-        LIBS += \
-          -Wl,--start-group \
-            $(MKLROOT)/lib/intel64/libmkl_intel_lp64.a \
-            $(MKLROOT)/lib/intel64/libmkl_core.a \
-            $(MKLROOT)/lib/intel64/libmkl_intel_thread.a \
-          -Wl,--end-group
-      endif
-    endif
-    ifeq (0,$(OMP))
-      MIC_LDFLAGS += -qoffload-option,mic,ld,"-liomp5"
-      LIBS += -liomp5
-    endif
-    MIC_LDFLAGS += -qoffload-option,mic,ld,"-lpthread -lm"
-    LIBS += -Wl,--as-needed -lpthread -lm -Wl,--no-as-needed
+ifeq (1,$(MKL)) # sequential
+  MKL_THREADS = sequential
+else ifneq (0,$(MKL)) # multi-threaded
+  MKL_THREADS = $(MKL_OMPRTL)_thread
+  ifeq (0,$(OMP))
+    MIC_LDFLAGS += -qoffload-option,mic,ld,"-liomp5"
+    LIBS += -liomp5
   endif
-else # sequential
+endif
+ifneq (0,$(MKL))
   DFLAGS += -D__MKL -D__FFTW3
   IFLAGS += -I$(MKLROOT)/include -I$(MKLROOT)/include/fftw
   ifeq (0,$(MKL_STATIC))
     LIBS += -L$(MKLROOT)/lib/intel64
     ifneq (0,$(MPI))
-      MIC_LDFLAGS += -qoffload-option,mic,ld,"-L$(MKLROOT)/lib/mic -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lmkl_blacs_intelmpi_lp64"
-      LIBS += -l$(SCALAPACKLIB) -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lmkl_blacs_intelmpi_lp64
+      MIC_LDFLAGS += -qoffload-option,mic,ld,"-L$(MKLROOT)/lib/mic -l$(SCALAPACKLIB) -lmkl_$(MKL_FCRTL)_lp64 -lmkl_core -lmkl_$(MKL_THREADS) -lmkl_blacs_intelmpi_lp64"
+      LIBS += -l$(SCALAPACKLIB) -lmkl_$(MKL_FCRTL)_lp64 -lmkl_core -lmkl_$(MKL_THREADS) -lmkl_blacs_intelmpi_lp64
     else
-      MIC_LDFLAGS += -qoffload-option,mic,ld,"-L$(MKLROOT)/lib/mic -lmkl_intel_lp64 -lmkl_core -lmkl_sequential"
-      LIBS += -lmkl_intel_lp64 -lmkl_core -lmkl_sequential
+      MIC_LDFLAGS += -qoffload-option,mic,ld,"-L$(MKLROOT)/lib/mic -lmkl_$(MKL_FCRTL)_lp64 -lmkl_core -lmkl_$(MKL_THREADS)"
+      LIBS += -lmkl_$(MKL_FCRTL)_lp64 -lmkl_core -lmkl_$(MKL_THREADS)
     endif
   else # static
     ifneq (0,$(MPI))
       MIC_LDFLAGS += -qoffload-option,mic,ld," \
         --start-group \
-          $(MKLROOT)/lib/mic/libmkl_scalapack_lp64.a \
-          $(MKLROOT)/lib/mic/libmkl_intel_lp64.a \
+          $(MKLROOT)/lib/mic/lib$(SCALAPACKLIB).a \
+          $(MKLROOT)/lib/mic/libmkl_$(MKL_FCRTL)_lp64.a \
           $(MKLROOT)/lib/mic/libmkl_core.a \
-          $(MKLROOT)/lib/mic/libmkl_sequential.a \
+          $(MKLROOT)/lib/mic/libmkl_$(MKL_THREADS).a \
           $(MKLROOT)/lib/mic/libmkl_blacs_intelmpi_lp64.a \
         --end-group"
       LIBS += \
         -Wl,--start-group \
           $(SCALAPACKDIR)/lib$(SCALAPACKLIB).a \
-          $(MKLROOT)/lib/intel64/libmkl_intel_lp64.a \
+          $(MKLROOT)/lib/intel64/libmkl_$(MKL_FCRTL)_lp64.a \
           $(MKLROOT)/lib/intel64/libmkl_core.a \
-          $(MKLROOT)/lib/intel64/libmkl_sequential.a \
+          $(MKLROOT)/lib/intel64/libmkl_$(MKL_THREADS).a \
           $(MKLROOT)/lib/intel64/libmkl_blacs_intelmpi_lp64.a \
         -Wl,--end-group
     else
       MIC_LDFLAGS += -qoffload-option,mic,ld," \
         --start-group \
-          $(MKLROOT)/lib/mic/libmkl_intel_lp64.a \
+          $(MKLROOT)/lib/mic/libmkl_$(MKL_FCRTL)_lp64.a \
           $(MKLROOT)/lib/mic/libmkl_core.a \
-          $(MKLROOT)/lib/mic/libmkl_sequential.a \
+          $(MKLROOT)/lib/mic/libmkl_$(MKL_THREADS).a \
         --end-group"
-      MKL_LIBS = \
+      LIBS += \
         -Wl,--start-group \
-          $(MKLROOT)/lib/intel64/libmkl_intel_lp64.a \
+          $(MKLROOT)/lib/intel64/libmkl_$(MKL_FCRTL)_lp64.a \
           $(MKLROOT)/lib/intel64/libmkl_core.a \
-          $(MKLROOT)/lib/intel64/libmkl_sequential.a \
+          $(MKLROOT)/lib/intel64/libmkl_$(MKL_THREADS).a \
         -Wl,--end-group
     endif
   endif
-  MIC_LDFLAGS += -qoffload-option,mic,ld,"-lpthread -lm"
   LIBS += -Wl,--as-needed -lpthread -lm -Wl,--no-as-needed
+  MIC_LDFLAGS += -qoffload-option,mic,ld,"-lpthread -lm"
 endif
 
 ifneq (,$(wildcard $(SRCDIR)/dbcsr/libsmm_acc/libxsmm_acc))
@@ -579,44 +617,43 @@ ifneq (0,$(RECONFIGURE))
   DIAG_DISABLE := $(DIAG_DISABLE),11021
 endif
 
-# check if the Intel Development Tools are available
-INTEL ?= $(shell echo "$$((2==$(words $(filter icpc icpx icc icx, \
-  $(shell $(CXX) --version 2> /dev/null | head -n1 | cut -d' ' -f1) \
-  $(shell $(CC) --version 2> /dev/null | head -n1 | cut -d' ' -f1)))))")
-ifeq (0,$(INTEL))
-  $(info ================================================================================)
-  $(info This ARCH file relies on Intel Compiler and Libraries. Please try the following:)
-  $(info $$ source /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64)
-  $(info ================================================================================)
-  $(error Intel Development Tools not found!)
-endif
-
-DFLAGS += -D__INTEL -D__HAS_ISO_C_BINDING
+DFLAGS += -D__HAS_ISO_C_BINDING
 # general include paths
 #IFLAGS +=
 
 # Define __INTEL_COMPILER in case of external preprocessing because some source (pw/fft/fftw3_lib.F)
 # toggles code using this symbol, but of course the cpp preprocessor is not defining this symbol.
-CPPFLAGS += #-C $(IFLAGS) $(DFLAGS) -D__INTEL_COMPILER -P -traditional
+ifneq (,$(strip $(CPP)))
+  CPPFLAGS += -C $(IFLAGS) $(DFLAGS) -D__INTEL_COMPILER -P -traditional
+endif
 
-CXXFLAGS  += $(OPTFLAGS) -diag-disable $(DIAG_DISABLE) $(DFLAGS) $(IFLAGS)
-CFLAGS    += $(OPTFLAGS) -diag-disable $(DIAG_DISABLE) $(DFLAGS) $(IFLAGS)
-FCFLAGS   += $(OPTFLAGS) -diag-disable $(DIAG_DISABLE) $(DFLAGS) $(IFLAGS)
-LDFLAGS   += $(OPTFLAGS) -diag-disable $(DIAG_DISABLE)
-LDFLAGS_C += $(OPTFLAGS) -diag-disable $(DIAG_DISABLE) -nofor_main
+CXXFLAGS  += $(OPTFLAGS) $(DFLAGS) $(IFLAGS)
+CFLAGS    += $(OPTFLAGS) $(DFLAGS) $(IFLAGS)
+FCFLAGS   += $(OPTFLAGS) $(DFLAGS) $(IFLAGS)
+LDFLAGS   += $(OPTFLAGS)
+LDFLAGS_C += $(OPTFLAGS)
+
+ifeq (0,$(GNU))
+  CXXFLAGS  += -diag-disable $(DIAG_DISABLE)
+  CFLAGS    += -diag-disable $(DIAG_DISABLE)
+  FCFLAGS   += -diag-disable $(DIAG_DISABLE)
+  LDFLAGS   += -diag-disable $(DIAG_DISABLE)
+  LDFLAGS_C += -diag-disable $(DIAG_DISABLE) -nofor_main
+endif
 
 LIBS += -Wl,--as-needed -lstdc++ -Wl,--no-as-needed
 ifneq (0,$(ACC))
-  ifneq (0,$(OFFLOAD))
-    LIBS     += $(MIC_LDFLAGS)
-    CXXFLAGS += $(MIC_CXFLAGS)
-    CFLAGS   += $(MIC_CCFLAGS)
-    FCFLAGS  += $(MIC_FCFLAGS)
-    #LDFLAGS  += $(MIC_LDFLAGS)
-  endif
+ifneq (0,$(OFFLOAD))
+  LIBS     += $(MIC_LDFLAGS)
+  CXXFLAGS += $(MIC_CXFLAGS)
+  CFLAGS   += $(MIC_CCFLAGS)
+  FCFLAGS  += $(MIC_FCFLAGS)
+  #LDFLAGS  += $(MIC_LDFLAGS)
+endif
 endif
 
 # filter-out override_limits flag since IFORT may run out of memory (SIGKILL)
+ifeq (0,$(GNU))
 mp2_eri.o: mp2_eri.F
 	$(eval MAKE_FYPP := $(if $(wildcard $(TOOLSRC)/build_utils/fypp),$(TOOLSRC)/build_utils/fypp $(FYPPFLAGS) $< $*.F90,$(NULL)))
 	$(MAKE_FYPP)
@@ -625,6 +662,7 @@ minimax_exp_k53.o: minimax_exp_k53.F
 	$(eval MAKE_FYPP := $(if $(wildcard $(TOOLSRC)/build_utils/fypp),$(TOOLSRC)/build_utils/fypp $(FYPPFLAGS) $< $*.F90,$(NULL)))
 	$(MAKE_FYPP)
 	$(FC) -c $(filter-out -qoverride_limits,$(FCFLAGS)) -D__SHORT_FILE__="\"$(subst $(SRCDIR)/,,$<)\"" -I'$(dir $<)' $*.F90 $(FCLOGPIPE)
+endif
 
 ifeq (1,$(shell echo $$((1 <= $(BEEP)))))
 helium_sampling.o: helium_sampling.F

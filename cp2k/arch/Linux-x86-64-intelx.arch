@@ -640,9 +640,9 @@ endif
 endif
 
 cleanup = $(foreach flag,$1,$(flag))
+LDFLAGS := $(filter-out -ipo -ipo-separate,$(call cleanup,$(LDFLAGS)))
 CXXFLAGS := $(call cleanup,$(CXXFLAGS))
 FCFLAGS := $(call cleanup,$(FCFLAGS))
-LDFLAGS := $(call cleanup,$(LDFLAGS))
 CFLAGS := $(call cleanup,$(CFLAGS))
 DFLAGS := $(call cleanup,$(DFLAGS))
 IFLAGS := $(call cleanup,$(IFLAGS))

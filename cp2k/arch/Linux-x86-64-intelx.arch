@@ -480,7 +480,6 @@ ifneq (0,$(ACC))
     DFLAGS += -D__ACC_MIC
     ifeq (0,$(OFFLOAD))
       OPTFLAGS += -qno-offload
-      LDFLAGS += -qoffload-option,mic,ld,"--unresolved-symbols=ignore-all"
     else # also true if OFFLOAD is undefined
       #OPTFLAGS += -qoffload=mandatory
       # enable OpenMP for OFFLOAD regardless of whether OMP is enabled or not
@@ -488,6 +487,7 @@ ifneq (0,$(ACC))
       MIC_CCFLAGS += -qopenmp -qno-openmp -qoffload-option,mic,compiler,"-qopenmp"
       MIC_FCFLAGS += -qopenmp -qno-openmp -qoffload-option,mic,compiler,"-qopenmp"
       MIC_LDFLAGS += -qoffload-option,mic,ld,"--no-undefined"
+      #LDFLAGS += -qoffload-option,mic,ld,"--unresolved-symbols=ignore-all"
       DIAG_DISABLE := $(DIAG_DISABLE),10121
       ifneq (,$(ATTRIBUTE))
         MIC_CXFLAGS += -qoffload-attribute-target=$(ATTRIBUTE)
@@ -501,10 +501,11 @@ ifneq (0,$(ACC))
   endif
 else # ACC off
   ifeq (0,$(GNU))
-  ifeq (0,$(OFFLOAD))
-    OPTFLAGS += -qno-offload
-    LDFLAGS += -qoffload-option,mic,ld,"--unresolved-symbols=ignore-all"
-  endif
+    ifeq (0,$(OFFLOAD))
+      OPTFLAGS += -qno-offload
+    #else
+      #LDFLAGS += -qoffload-option,mic,ld,"--unresolved-symbols=ignore-all"
+    endif
   endif
   # save some build time
   LIBXSTREAMROOT = $(NULL)

@@ -247,6 +247,9 @@ else # GNU GCC
   ifeq (0,$(DBG))
     OPTFLAGS += -funroll-loops -ftree-vectorize
     DFLAGS   += -DNDEBUG
+    ifneq (0,$(IPO))
+      OPTFLAGS += -flto -Wl,-flto
+    endif
     OPT = 3
   else
     OPT = 0
@@ -255,7 +258,7 @@ else # GNU GCC
   MKL_OMPRTL = gnu
   MKL_FCRTL = gf
   INTEL ?= 0
-  AR = ar -r
+  AR = gcc-ar -r
 endif
 
 OPT1 = $(shell echo $$((1<$(OPT)?1:$(OPT))))

@@ -32,16 +32,12 @@ endif
 #
 LIBXSTREAMROOT = $(TOOLSRC)/mic/libxstream
 
-# Diagnostic message to be turned off
-DIAG_DISABLE = 8290,8291,10010,10212,10411,11060
-
 # DEFAULTS
 #
 GNU ?= 0
 JIT ?= 1
 SSE ?= 0
 AVX ?= 0
-OPT ?= 2
 MPI ?= 1
 OMP ?= 1
 ACC ?= 0
@@ -60,10 +56,6 @@ ifeq (0,$(GNU))
   RECONFIGURE ?= 1
 else
   RECONFIGURE ?= 0
-endif
-
-ifneq (0,$(DBG))
-  OPT = 0
 endif
 
 # CP2K's configuration namespace (prefix)
@@ -98,16 +90,25 @@ else
   ACC = 1
 endif
 
-OPT1 = $(shell echo $$((1<$(OPT)?1:$(OPT))))
-OPT2 = $(shell echo $$((2<$(OPT)?2:$(OPT))))
+# Diagnostic message to be turned off
+DIAG_DISABLE = 8290,8291,10010,10212,10411,11060
 
-ifeq (0,$(ATTRIBS))
-  DFLAGS += -DCP_DISABLE_ATTRIBS
-endif
+# workaround for issue "cannot find address of function"
+#ATTRIBUTE = mic
+#DIAG_DISABLE := $(DIAG_DISABLE),2571,3218
 
-# initial build flags
 ifeq (0,$(GNU)) # Intel
-  FCFLAGS += -free -fpp -heap-arrays
+  # check if the Intel Development Tools are available
+  INTEL ?= $(shell echo "$$((2==$(words $(filter icpc icpx icc icx, \
+    $(shell $(CXX) --version 2> /dev/null | head -n1 | cut -d' ' -f1) \
+    $(shell $(CC) --version 2> /dev/null | head -n1 | cut -d' ' -f1)))))")
+  ifeq (0,$(INTEL))
+    $(info ================================================================================)
+    $(info This ARCH file relies on Intel Compiler and Libraries. Please try the following:)
+    $(info $$ source /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64)
+    $(info ================================================================================)
+    $(error Intel Development Tools not found!)
+  endif
   ifeq (1,$(shell echo $$((2 > $(DBG)))))
     ifeq (1,$(AVX))
       TARGET = -xAVX
@@ -129,8 +130,42 @@ ifeq (0,$(GNU)) # Intel
       TARGET = -xHost
     endif
   endif
-else
-  FCFLAGS += -ffree-form -ffree-line-length-none
+  ifeq (0,$(DBG))
+    FCFLAGS  += -align array64byte     $(FPFMODEL) $(FPFLAGS) -nostandard-realloc-lhs
+    CFLAGS   += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
+    CXXFLAGS += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
+    OPTFLAGS += -qoverride_limits
+    DFLAGS   += -DNDEBUG
+    ifneq (0,$(IPO))
+      OPTFLAGS += -ipo-separate
+    else ifeq (0,$(IPO))
+      LDFLAGS += -no-ipo
+    endif
+    OPT = 2
+  else
+    CXXFLAGS := -debug $(CXXFLAGS)
+    FCFLAGS  := -debug $(FCFLAGS)
+    CFLAGS   := -debug $(CFLAGS)
+    ifeq (2,$(DBG))
+      FCFLAGS += -fpe0 # debugging NaNs
+    endif
+    OPT = 0
+  endif
+  FCFLAGS += -free -fpp -heap-arrays
+  # more recent IFORT versions enable F2008 by default
+  DFLAGS += -D__INTEL -D__F2008
+  MKL_THREADS = intel
+  MKL_FCRTL = intel
+  AR = xiar -r
+else # GNU GCC
+  ifeq (,$(MKLROOT))
+    $(info ================================================================================)
+    $(info This ARCH file relies on Intel Libraries. Please try the following:)
+    $(info $$ source /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64)
+	$(info Note: Intel MPI is also required.)
+    $(info ================================================================================)
+    $(error Intel MKL not found!)
+  endif
   ifeq (1,$(shell echo $$((2 > $(DBG)))))
     ifeq (1,$(AVX))
       TARGET = -mavx
@@ -152,16 +187,28 @@ else
       TARGET = -march=native
     endif
   endif
+  FCFLAGS += -ffree-form -ffree-line-length-none
+  ifeq (0,$(DBG))
+    OPTFLAGS += -funroll-loops -ftree-vectorize
+    DFLAGS   += -DNDEBUG
+    OPT = 3
+  else
+    OPT = 0
+  endif
+  DFLAGS += -D__HAS_NO_MPI_MOD
+  MKL_OMPRTL = gnu
+  MKL_FCRTL = gf
+  INTEL ?= 0
+  AR = ar -r
 endif
-LDFLAGS  += #-static-intel -static-libgcc -static-libstdc++
-OPTFLAGS  = $(TARGET)
-CXXFLAGS  = #-std=c++0x
-CFLAGS    = #
 
-# workaround for issue "cannot find address of function"
-#ATTRIBUTE = mic
-#DIAG_DISABLE := $(DIAG_DISABLE),2571,3218
+OPT1 = $(shell echo $$((1<$(OPT)?1:$(OPT))))
+OPT2 = $(shell echo $$((2<$(OPT)?2:$(OPT))))
+ifeq (0,$(ATTRIBS))
+  DFLAGS += -DCP_DISABLE_ATTRIBS
+endif
 
+SYM ?= $(DBG)
 ifneq (0,$(SYM))
   DFLAGS += -D__USE_CP2K_TRACE
   OPTFLAGS += -traceback
@@ -175,44 +222,6 @@ ifneq (0,$(SYM))
     CFLAGS := -g $(CFLAGS)
     FCFLAGS := -g $(FCFLAGS)
   endif
-endif
-
-ifeq (0,$(GNU))
-  # check if the Intel Development Tools are available
-  INTEL ?= $(shell echo "$$((2==$(words $(filter icpc icpx icc icx, \
-    $(shell $(CXX) --version 2> /dev/null | head -n1 | cut -d' ' -f1) \
-    $(shell $(CC) --version 2> /dev/null | head -n1 | cut -d' ' -f1)))))")
-  ifeq (0,$(INTEL))
-    $(info ================================================================================)
-    $(info This ARCH file relies on Intel Compiler and Libraries. Please try the following:)
-    $(info $$ source /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64)
-    $(info ================================================================================)
-    $(error Intel Development Tools not found!)
-  endif
-  ifneq (0,$(IPO))
-    OPTFLAGS += -ipo-separate
-  else ifeq (0,$(IPO))
-    LDFLAGS += -no-ipo
-  endif
-  # more recent IFORT versions enable F2008 by default
-  DFLAGS += -D__INTEL -D__F2008
-  MKL_THREADS = intel
-  MKL_FCRTL = intel
-  AR = xiar -r
-else
-  ifeq (,$(MKLROOT))
-    $(info ================================================================================)
-    $(info This ARCH file relies on Intel Libraries. Please try the following:)
-    $(info $$ source /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64)
-	$(info Note: Intel MPI is also required.)
-    $(info ================================================================================)
-    $(error Intel MKL not found!)
-  endif
-  DFLAGS += -D__HAS_NO_MPI_MOD
-  INTEL ?= 0
-  MKL_OMPRTL = gnu
-  MKL_FCRTL = gf
-  AR = ar -r
 endif
 
 SCALAPACK ?= 1
@@ -308,37 +317,10 @@ endif
 # default if not set earlier
 BEEP ?= 0
 
-ifeq (0,$(GNU))
-endif
-
-
-ifeq (0,$(DBG))
-  DFLAGS   += -DNDEBUG
-  OPTFLAGS += -O$(OPT)
-  ifeq (0,$(GNU))
-    OPTFLAGS += -qoverride_limits
-    CXXFLAGS += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
-    CFLAGS   += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
-    FCFLAGS  += -align array64byte     $(FPFMODEL) $(FPFLAGS) -nostandard-realloc-lhs
-  endif
-  #LDFLAGS  += $(NULL)
-else
-  OPTFLAGS += -O$(OPT)
-  ifeq (0,$(GNU))
-    CXXFLAGS := -debug $(CXXFLAGS)
-    CFLAGS := -debug $(CFLAGS)
-    FCFLAGS := -debug $(FCFLAGS)
-    ifeq (2,$(DBG))
-      FCFLAGS += -fpe0 # debugging NaNs
-    endif
-  endif
-  SYM = $(DBG)
-endif
-
 ifneq (0,$(OMP))
   ifeq (0,$(GNU))
-    FCFLAGS  += -threads #-parallel
-    LDFLAGS  += -threads
+    FCFLAGS += -threads #-parallel
+    LDFLAGS += -threads
   endif
   OPTFLAGS += -fopenmp
   ifneq (0,$(NESTED))
@@ -627,10 +609,11 @@ ifneq (,$(strip $(CPP)))
   CPPFLAGS += -C $(IFLAGS) $(DFLAGS) -D__INTEL_COMPILER -P -traditional
 endif
 
-CXXFLAGS  += $(OPTFLAGS) $(DFLAGS) $(IFLAGS)
+OPTFLAGS  += -O$(OPT) $(TARGET)
+CXXFLAGS  += $(OPTFLAGS) $(DFLAGS) $(IFLAGS) #-std=c++0x
 CFLAGS    += $(OPTFLAGS) $(DFLAGS) $(IFLAGS)
 FCFLAGS   += $(OPTFLAGS) $(DFLAGS) $(IFLAGS)
-LDFLAGS   += $(OPTFLAGS)
+LDFLAGS   += $(OPTFLAGS) #-static-intel -static-libgcc -static-libstdc++
 LDFLAGS_C += $(OPTFLAGS)
 
 ifeq (0,$(GNU))

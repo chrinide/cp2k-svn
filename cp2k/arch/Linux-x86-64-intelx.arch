@@ -41,6 +41,7 @@ MPI ?= 1
 OMP ?= 1
 SYM ?= 0
 DBG ?= 0
+IPO ?= 0
 MKL_DIRECT ?= 0
 MKL_STATIC ?= 1
 ELPA ?= 201705
@@ -187,12 +188,10 @@ ifeq (0,$(GNU)) # Intel
     CXXFLAGS += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
     OPTFLAGS += -qoverride_limits
     DFLAGS   += -DNDEBUG
-    ifneq (,$(IPO))
-      ifneq (0,$(IPO))
-        OPTFLAGS += -ipo-separate
-      else ifeq (0,$(IPO))
-        LDFLAGS += -no-ipo
-      endif
+    ifneq (0,$(IPO))
+      OPTFLAGS += -ipo-separate
+    else ifeq (0,$(IPO))
+      LDFLAGS += -no-ipo
     endif
     OPT = 2
   else
@@ -244,10 +243,8 @@ else # GNU GCC
   ifeq (0,$(DBG))
     OPTFLAGS += -funroll-loops -ftree-vectorize
     DFLAGS   += -DNDEBUG
-    ifneq (,$(IPO))
     ifneq (0,$(IPO))
       OPTFLAGS += -flto -Wl,-flto
-    endif
     endif
     OPT = 3
   else

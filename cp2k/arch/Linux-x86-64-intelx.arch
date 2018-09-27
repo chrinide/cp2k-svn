@@ -187,10 +187,12 @@ ifeq (0,$(GNU)) # Intel
     CXXFLAGS += -fno-alias -ansi-alias $(FPCMODEL) $(FPFLAGS)
     OPTFLAGS += -qoverride_limits
     DFLAGS   += -DNDEBUG
-    ifneq (0,$(IPO))
-      OPTFLAGS += -ipo-separate
-    else ifeq (0,$(IPO))
-      LDFLAGS += -no-ipo
+    ifneq (,$(IPO))
+      ifneq (0,$(IPO))
+        OPTFLAGS += -ipo-separate
+      else ifeq (0,$(IPO))
+        LDFLAGS += -no-ipo
+      endif
     endif
     OPT = 2
   else
@@ -242,8 +244,10 @@ else # GNU GCC
   ifeq (0,$(DBG))
     OPTFLAGS += -funroll-loops -ftree-vectorize
     DFLAGS   += -DNDEBUG
+    ifneq (,$(IPO))
     ifneq (0,$(IPO))
       OPTFLAGS += -flto -Wl,-flto
+    endif
     endif
     OPT = 3
   else

@@ -35,21 +35,14 @@ LIBXSTREAMROOT = $(TOOLSRC)/mic/libxstream
 # DEFAULTS
 #
 GNU ?= 0
-JIT ?= 1
 SSE ?= 0
 AVX ?= 0
 MPI ?= 1
 OMP ?= 1
-ACC ?= 0
-OCL ?= 0
 SYM ?= 0
 DBG ?= 0
-IPO ?= 0
 MKL_DIRECT ?= 0
 MKL_STATIC ?= 1
-MEMKIND ?= 1
-OFFLOAD ?= 0
-NESTED ?= 0
 ELPA ?= 201705
 
 ifeq (0,$(GNU))
@@ -84,6 +77,8 @@ TBBMALLOC ?= 0
 # TBB runtime compatible with oldest supported GCC
 TBBGCC_OLD ?= 1
 
+ACC ?= 0
+OFFLOAD ?= 0
 ifeq (0,$(OFFLOAD))
   MIC ?= 0
 else
@@ -321,6 +316,7 @@ endif
 BEEP ?= 0
 
 ifneq (0,$(OMP))
+  NESTED ?= 0
   ifeq (0,$(GNU))
     FCFLAGS += -threads #-parallel
     LDFLAGS += -threads
@@ -391,6 +387,7 @@ else ifneq (,$(TCMALLOCROOT))
   LIBS += $(TCMALLOCROOT)/lib/libtcmalloc_minimal.a
 endif
 
+MEMKIND ?= 1
 ifneq (0,$(MEMKIND))
   ifneq (,$(MEMKINDROOT))
     #LIBS += -L$(MEMKINDROOT)/lib -lmemkind
@@ -453,6 +450,7 @@ ifneq (,$(LIBXSMMROOT))
     else
       WRAP ?= 0
     endif
+    JIT ?= 1
     ifeq (1,$(shell echo "$$((0>=$(JIT)))"))
       LIBXSMM_MNK := "23, 6, 14 16 29, 14 32 29, 5 32 13 24 26, 9 32 22, 64, 78, 16 29 55, 32 29 55, 12, 4 5 7 9 13 25 26 28 32 45"
     endif
@@ -474,6 +472,7 @@ ifneq (,$(LIBXSMMROOT))
   endif
 endif
 
+OCL ?= 0
 ifneq (0,$(ACC))
   DFLAGS += -D__ACC -D__DBCSR_ACC
   ifeq (0,$(OCL))
